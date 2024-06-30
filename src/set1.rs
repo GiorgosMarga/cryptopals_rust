@@ -18,7 +18,14 @@ pub fn str_to_vec(s: &str) -> Vec<u8> {
 pub fn vec_to_str(v: &Vec<u8>) -> String {
     String::from_utf8_lossy(v).to_string()
 }
-
+// read_file reads a file and returns the content
+pub fn read_file(filename: &str) -> Result<Vec<String>> {
+    let file = File::open(filename)?;
+    let reader = BufReader::new(file);
+    let lines: Result<Vec<String>> = reader.lines().collect();
+    lines
+}
+// Challenge 1
 // base64_to_hex transforms base64 to hex
 pub fn base64_to_hex(input: &Vec<u8>) -> Vec<u8> {
     let bytes = base64::decode(input).unwrap();
@@ -47,17 +54,8 @@ pub fn hex_encode(hex: &Vec<u8>) -> Vec<u8> {
 pub fn base64_decode(base64: &Vec<u8>) -> Vec<u8> {
     base64::decode(base64).unwrap()
 }
-
-// single_byte_xor returns the xor of the input with a single byte
-pub fn single_byte_xor(buf: &Vec<u8>, b: u8) -> Vec<u8> {
-    let mut xor_res = Vec::new();
-    for i in 0..buf.len() {
-        xor_res.push(buf[i] ^ b)
-    }
-    xor_res
-}
-
-// fixed_xor returns the xor of two vectors of butes
+// Challenge 2
+// fixed_xor returns the xor of two vectors of bytes
 pub fn fixed_xor(b1: &Vec<u8>, b2: &Vec<u8>) -> Vec<u8> {
     assert_eq!(b1.len(), b2.len());
     let mut xored = Vec::new();
@@ -67,7 +65,18 @@ pub fn fixed_xor(b1: &Vec<u8>, b2: &Vec<u8>) -> Vec<u8> {
     xored
 }
 
-// decrypt_single_byte_xor brute forces for every byte value to find the decrypted message using the score of it.
+// Challenge 3
+// single_byte_xor returns the xor of the input with a single byte
+pub fn single_byte_xor(buf: &Vec<u8>, b: u8) -> Vec<u8> {
+    let mut xor_res = Vec::new();
+    for i in 0..buf.len() {
+        xor_res.push(buf[i] ^ b)
+    }
+    xor_res
+}
+
+// Challenge 4
+// decrypt_single_byte_xor brute forces for every byte value to find the decrypted message using the score function.
 pub fn decrypt_single_byte_xor(encrypted: &Vec<u8>) -> (Vec<u8>, u8) {
     let mut best_score = 0;
     let mut message: Vec<u8> = Vec::new();
@@ -112,13 +121,9 @@ pub fn detect_single_char_xor(filename: &str) -> Option<Vec<u8>> {
     }
     Some(decrypted_message)
 }
-pub fn read_file(filename: &str) -> Result<Vec<String>> {
-    let file = File::open(filename)?;
-    let reader = BufReader::new(file);
-    let lines: Result<Vec<String>> = reader.lines().collect();
-    lines
-}
 
+// Challenge 5
+// repeating_xor_encryption uses the reapeating xor method to encrypt a message.
 fn repeating_xor_encryption(msg: &Vec<u8>, key: &Vec<u8>) -> Vec<u8> {
     let mut res = Vec::new();
     let mut ctr = 0;
@@ -128,18 +133,24 @@ fn repeating_xor_encryption(msg: &Vec<u8>, key: &Vec<u8>) -> Vec<u8> {
     }
     res
 }
+
+// Challenge 6
+// hamming_dist calculates the number of differing bits
 fn hamming_dist(b1: &Vec<u8>, b2: &Vec<u8>) -> usize {
     b1.iter()
         .zip(b2.iter())
         .map(|(&x, &y)| (x ^ y).count_ones() as usize)
         .sum()
 }
+// into_blocks transforms the encrypted message into chunks of key_size length.
 fn into_blocks(encrypted: &Vec<u8>, key_size: usize) -> Vec<Vec<u8>> {
     encrypted
         .chunks(key_size)
         .map(|chunk| chunk.to_vec())
         .collect()
 }
+
+// transpose transposes the chunks. Used after the into_blocks.
 fn transpose(blocks: &Vec<Vec<u8>>) -> Vec<Vec<u8>> {
     let max_cols = blocks.iter().map(|row| row.len()).max().unwrap_or(0);
     let mut transposed: Vec<Vec<u8>> = vec![vec![0; blocks.len()]; max_cols];
@@ -150,6 +161,7 @@ fn transpose(blocks: &Vec<Vec<u8>>) -> Vec<Vec<u8>> {
     }
     transposed
 }
+// find_key_size returns num_of_keys candidates for the size of the key.
 fn find_key_size(encrypted: &Vec<u8>, num_of_keys: usize) -> Vec<(f32, usize)> {
     let mut distances: Vec<(f32, usize)> = Vec::new();
 
@@ -168,6 +180,7 @@ fn find_key_size(encrypted: &Vec<u8>, num_of_keys: usize) -> Vec<(f32, usize)> {
     distances[0..num_of_keys].to_vec()
 }
 
+// break_reapeating_xor combined the 3 functions from above to decrypt the message.
 fn break_repeating_xor(encrypted: &Vec<u8>) -> (Vec<u8>, Vec<u8>) {
     // will use the best 3 keys.
     let keysizes = find_key_size(&encrypted, 3);
@@ -191,6 +204,8 @@ fn break_repeating_xor(encrypted: &Vec<u8>) -> (Vec<u8>, Vec<u8>) {
     }
     (decrypted_msg, keys)
 }
+// Challenge 7 
+// decrypt_aes_ecb decrypts the encrypted message using ECB.
 pub fn decrypt_aes_ecb(encrypted: &Vec<u8>, key: &Vec<u8>) -> Vec<u8> {
     assert_eq!(key.len(), 16, "Key must be 16 bytes long");
     let key = GenericArray::clone_from_slice(key);
@@ -203,6 +218,7 @@ pub fn decrypt_aes_ecb(encrypted: &Vec<u8>, key: &Vec<u8>) -> Vec<u8> {
     let decrypted = blocks.iter().flatten().map(|x| *x).collect::<Vec<u8>>();
     set2::pkcs7_unpad(&decrypted)
 }
+// decrypt_aes_ecb encrypts the plain text using ECB.
 pub fn encrypt_aes_ecb(msg: Vec<u8>, key: &Vec<u8>) -> Vec<u8> {
     assert_eq!(key.len(), 16, "Key must be 16 bytes long");
     let msg_len = msg.len();
@@ -222,6 +238,9 @@ pub fn encrypt_aes_ecb(msg: Vec<u8>, key: &Vec<u8>) -> Vec<u8> {
         .map(|x| *x)
         .collect::<Vec<u8>>()
 }
+
+// Challenge 8
+// is_ecb_mode returns true if the message is encrypted via ECB. It checks if there are 2 identical blocks.
 pub fn is_ecb_mode(encrypted: &Vec<u8>) -> bool {
     let mut seen_blocks = HashSet::new();
     for block in encrypted.chunks(16) {
